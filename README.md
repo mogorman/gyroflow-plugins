@@ -72,6 +72,18 @@ For manual installation steps and more details, refer to [the documentation](htt
 
 ---
 
+## Building from source
+
+The OpenFX plugin can be built hermetically with [Nix](https://nixos.org/nix/):
+
+```sh
+nix build .#ofx   # produces result/Gyroflow.ofx.bundle
+```
+
+See [README-OpenFX.md](README-OpenFX.md#building-from-source-with-nix) for details, including a `nix develop` shell.
+
+---
+
 ## License
 
 Distributed under the GPLv3 License with App Store Exception. See [LICENSE](https://github.com/gyroflow/gyroflow-plugins/blob/main/LICENSE) for more information.

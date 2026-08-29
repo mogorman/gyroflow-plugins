@@ -1,0 +1,30 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+name: Nix build
+
+jobs:
+  build:
+    name: Build OpenFX plugin (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer@main
+        with:
+          extra_nix_config: |
+            # The build fetches dependencies (crates.io, git deps) outside the
+            # sandbox, so allow the network for those fetchers.
+            experimental-features = nix-command flakes
+
+      - name: Build
+        run: nix build .#ofx
+
+      - name: Show the produced bundle
+        run: |
+          find result/Gyroflow.ofx.bundle -type f -o -type l
+          file result/Gyroflow.ofx.bundle/Contents/Linux-x86-64/Gyroflow.ofx

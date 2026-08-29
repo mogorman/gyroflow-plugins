@@ -29,6 +29,36 @@ Create the folder if it doesn't exist yet.
 
 ## For more detailed instructions, see the [docs](https://docs.gyroflow.xyz/app/video-editor-plugins/davinci-resolve-openfx#installation)
 
+# Building from source with Nix
+
+The plugin can be built hermetically with [Nix](https://nixos.org/nix/). The build
+fetches every dependency (crates.io, the `gyroflow-core` git dependency, and the
+`ofx-rs` fork) outside the build sandbox and compiles fully offline, so the result
+is reproducible.
+
+```sh
+# Build the plugin; the result is a `Gyroflow.ofx.bundle` in ./result/
+nix build .#ofx
+
+# Or, without flakes (uses the pinned nixpkgs + sources from default.nix):
+nix-build
+```
+
+The produced bundle is at `result/Gyroflow.ofx.bundle/`. Copy it into your editor's
+OFX plugins directory as described above. Note that the Nix-built bundle is **not
+code-signed**, so on macOS you may need to bypass Gatekeeper, and on some editors
+you may need to trust it manually.
+
+To get a development shell (Rust, `just`, clang/libclang for `ofx_sys`'s bindgen,
+OpenCL, pkg-config, zip) instead of the manual `just install-deps`:
+
+```sh
+nix develop
+```
+
+Currently only **Linux (x86_64)** is supported by the flake; macOS and Windows builds
+are on the roadmap.
+
 # Usage
 
 ### Export `.gyroflow` file in the Gyroflow app
