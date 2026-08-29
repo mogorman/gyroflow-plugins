@@ -200,7 +200,7 @@ impl GyroflowPluginBase {
     pub fn get_gyroflow_location() -> Option<String> {
         match gyroflow_core::settings::try_get("exeLocation") {
             Some(serde_json::Value::String(v)) if !v.is_empty() => {
-                Some(v)
+                Some(Self::prefer_wrapper(&v))
             },
             _ => {
                 if cfg!(target_os = "macos") && std::path::Path::new("/Applications/Gyroflow.app/Contents/MacOS/gyroflow").exists() {
@@ -210,6 +210,30 @@ impl GyroflowPluginBase {
                 }
             }
         }
+    }
+
+    // On Nix, the recorded `exeLocation` is the raw ELF binary at
+    // `<store>/opt/Gyroflow/gyroflow`. Launching it directly skips the
+    // `bin/gyroflow` wrapper that sets QT_PLUGIN_PATH / NIXPKGS_QT6_QML_IMPORT_PATH,
+    // so the Qt Quick UI fails to load ("qtquickcontrols2plugin not found").
+    // Prefer the sibling wrapper when it exists.
+    fn prefer_wrapper(path: &str) -> String {
+        if cfg!(target_os = "macos") {
+            return path.to_string();
+        }
+        // <store>/opt/Gyroflow/gyroflow  ->  <store>/bin/gyroflow
+        // (three .parent() calls climb from the binary up to the store dir)
+        if let Some(wrapper) = std::path::Path::new(path)
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+            .map(|store| store.join("bin").join("gyroflow"))
+        {
+            if wrapper.exists() {
+                return wrapper.to_string_lossy().to_string();
+            }
+        }
+        path.to_string()
     }
 
     pub fn open_gyroflow(project_path: Option<&str>) {
