@@ -112,6 +112,10 @@ extern "C" fn f0r_set_param_value(instance: f0r_instance_t, param: f0r_param_t, 
                     } else {
                         if let Err(e) = inst.stab.import_gyroflow_file(&filesystem::path_to_url(&path), true, |_|(), Arc::new(AtomicBool::new(false)), true) {
                             log::error!("import_gyroflow_file error: {e:?}");
+                        } else {
+                            // Project gyro transforms (including LPF) are restored after the
+                            // embedded motion data is loaded, so apply them before smoothing.
+                            inst.stab.recompute_gyro();
                         }
                     }
 
