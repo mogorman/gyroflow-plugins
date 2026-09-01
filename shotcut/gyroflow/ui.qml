@@ -17,6 +17,16 @@ Item {
     property bool defaultOverview: false
     property real defaultTimestampScale: 1.0
     property bool blockUpdate: true
+    property string sourceResource: ""
+
+    function syncToClipIn() {
+        var inFrame = producer.in;
+        Qt.callLater(function() {
+            if ((producer.resource || "") === sourceResource &&
+                    producer.in === inFrame && profile.fps > 0)
+                filter.set("TimestampOffset", inFrame / profile.fps);
+        });
+    }
 
     function inferredProjectPath() {
         var resource = producer.resource || "";
@@ -41,9 +51,10 @@ Item {
     }
 
     width: 360
-    height: 250
+    height: 210
 
     Component.onCompleted: {
+        sourceResource = producer.resource || "";
         defaultProjectPath = inferredProjectPath();
         if (filter.isNew) {
             filter.set("Project", defaultProjectPath);
@@ -52,6 +63,7 @@ Item {
             filter.set("TimestampScale", defaultTimestampScale);
         }
         setControls();
+        syncToClipIn();
     }
 
     Shotcut.File {
@@ -166,12 +178,6 @@ Item {
             onClicked: timestampScale.value = defaultTimestampScale
         }
 
-        Shotcut.TipBox {
-            Layout.columnSpan: 3
-            Layout.fillWidth: true
-            text: qsTr("First save a project containing gyro data from Gyroflow. Shotcut currently restarts frei0r time after changing a clip's In point, so trimming or splitting can desynchronize stabilization. Use an untrimmed clip or a stabilized intermediate.")
-        }
-
         Item { Layout.fillHeight: true }
     }
 
@@ -180,4 +186,10 @@ Item {
         function onChanged() { setControls(); }
         function onPropertyChanged(name) { setControls(); }
     }
+
+    Connections {
+        target: producer
+        function onInChanged() { root.syncToClipIn(); }
+    }
+
 }
