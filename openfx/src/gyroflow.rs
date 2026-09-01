@@ -709,14 +709,22 @@ impl Execute for GyroflowPlugin {
                 effect_properties.set_supports_multi_resolution(true)?;
                 effect_properties.set_temporal_clip_access(true)?;
 
-                if supports_opengl && !supports_opencl && !supports_cuda && !supports_metal {
-                    // We'll initialize the devices in OpenGLContextAttached
+                // List our own devices up front so the OpenGL-only fast path below
+                // can be skipped when we actually have a local OpenCL device.
+                let opencl_devices = gyroflow_plugin_base::opencl::OclWrapper::list_devices();
+                let wgpu_devices = std::thread::spawn(|| gyroflow_plugin_base::wgpu::WgpuWrapper::list_devices()).join().unwrap();
+
+                if supports_opengl && !supports_opencl && !supports_cuda && !supports_metal && opencl_devices.is_empty() {
+                    // Host only offers OpenGL and we have no local OpenCL device,
+                    // so there is nothing better to use. We'll initialize the devices
+                    // in OpenGLContextAttached.
                     let _ = effect_properties.set_opengl_render_supported("true");
                     return OK;
                 }
 
-                let opencl_devices = gyroflow_plugin_base::opencl::OclWrapper::list_devices();
-                let wgpu_devices = std::thread::spawn(|| gyroflow_plugin_base::wgpu::WgpuWrapper::list_devices()).join().unwrap();
+                // Advertise OpenCL whenever we have a device, even if the host also
+                // (or only) reports OpenGL. Otherwise the host feeds us CPU/OpenGL
+                // buffers and stabilization runs on the CPU.
                 if !opencl_devices.is_empty() {
                     let _ = effect_properties.set_opencl_render_supported("true");
                     let _ = effect_properties.set_opengl_render_supported("true");
